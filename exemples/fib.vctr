@@ -1,0 +1,15 @@
+1 1 
+
+0
+while dup 10 > do
+	rot
+	rot
+	dup
+	swap
+	rot
+	+
+	print
+	rot
+	1 + 
+
+end
