@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <sys/syscall.h>
 
 #define DEBUG 0
  
@@ -13,11 +16,13 @@
 typedef enum {
   OP_NIL,
   OP_NUM,
+  OP_IDENTIFIER,
 
   OP_ADD,
   OP_SUB,
   OP_MUL,
   OP_DIV,
+  OP_MOD,
 
   OP_EQ,
 
@@ -34,13 +39,21 @@ typedef enum {
   OP_ROT,
   OP_DROP,
 
+  OP_STORE,
+  OP_LOAD,
+  OP_STORE8,
+  OP_LOAD8,
+  OP_PTR,
+
   OP_IF,
+  OP_ELSE,
   OP_WHILE,
   OP_DO,
   OP_END,
 
-  OP_PRINT,
+  OP_DUMP,
   OP_EXIT,
+  OP_SYSCALL,
 } Op_kind;
 
 typedef struct{
@@ -118,13 +131,21 @@ static const struct { const char *word; Op_kind kind; } keywords[] = {
   { "rot", OP_ROT},
   { "drop", OP_DROP},
 
+  { "store", OP_STORE},
+  { "load", OP_LOAD},
+  { "store8", OP_STORE8},
+  { "load8", OP_LOAD8},
+  { "ptr", OP_PTR},
+
   { "if", OP_IF },
+  { "else", OP_ELSE },
   { "while", OP_WHILE },
   { "do" , OP_DO},
   { "end", OP_END },
 
-  { "print", OP_PRINT },
+  { "dump", OP_DUMP},
   { "exit", OP_EXIT },
+  { "syscall", OP_SYSCALL},
 
 };
 
@@ -160,6 +181,15 @@ void lexer(char *source, Op_DA *ops){
 
       Op_kind kind = check_Keyword(start, len);
       Op op = {kind};
+
+      /*
+      if (op.kind == OP_NIL){
+        op.kind = OP_IDENTIFIER;
+        memcpy(op.as.identifier, start, len);
+
+      }
+      */
+      
       append_OpDA(ops, op);
       continue;
       
@@ -169,6 +199,7 @@ void lexer(char *source, Op_DA *ops){
     if (*src == '-') append_OpDA(ops, (Op){OP_SUB});
     if (*src == '*') append_OpDA(ops, (Op){OP_MUL});
     if (*src == '/') append_OpDA(ops, (Op){OP_DIV});
+    if (*src == '%') append_OpDA(ops, (Op){OP_MOD});
     if (*src == '=') {
       src++;
       if (*src == '=') {
@@ -202,14 +233,16 @@ void lexer(char *source, Op_DA *ops){
     src++;
   }
 
-  int stack[1024];
+  int stack[1024]; //stack for if/while addrs 
   int stackCounter = 0;
-
+  
   for (int i = 0; i < ops->count; i++) {
     if (ops->data[i].kind == OP_IF ||
         ops->data[i].kind == OP_WHILE ||
         ops->data[i].kind == OP_DO) {
+
       push(i);
+
     }else if (ops->data[i].kind == OP_END){
 
       int top = pop();
@@ -221,25 +254,52 @@ void lexer(char *source, Op_DA *ops){
         ops->data[i].as.jump = whileIdx;
         ops->data[top].as.jump = i;
 
-      } else {
+      }else {
 
         ops->data[i].as.jump = top; // End know where to jump back to
         ops->data[top].as.jump = i; // other stuff know where to jump forward
 
       }
+    }else if (ops->data[i].kind == OP_ELSE){
+      int ifIdx = pop();
+      ops->data[ifIdx].as.jump = i; // if jumps to else 
+
+      push(i);
+
     }
   }
 }
-int main() {
 
-  char *buf = readFile("./exemples/fib.vctr");
-  //printf("%s", buf);
+int doSyscall(int num, int64_t *args, int64_t argc) {
+    switch (argc) {
+        case 0: return syscall(num);
+        case 1: return syscall(num, args[0]);
+        case 2: return syscall(num, args[0], args[1]);
+        case 3: return syscall(num, args[0], args[1], args[2]);
+        case 4: return syscall(num, args[0], args[1], args[2], args[3]);
+        case 5: return syscall(num, args[0], args[1], args[2], args[3], args[4]);
+        case 6: return syscall(num, args[0], args[1], args[2], args[3], args[4], args[5]);
+        default:
+            return -1;
+    }
+}
+
+int main(int argc, char *argv[]) {
+
+  if (argc != 2){
+    printf("Usage: %s <name>.vctr\n", argv[0]);
+    exit(1);
+  }
+
+  char *buf = readFile(argv[1]);
   Op_DA ops = {0};
   init_OpDA(&ops);
   lexer(buf, &ops);  
-  //print_OpDA(&ops);
 
-  int stack[256];
+
+  uint8_t *heap = malloc(sizeof(uint8_t) * 1024);
+
+  int64_t stack[256];
   int stackCounter = 0;
 
   int i = 0;
@@ -281,6 +341,12 @@ int main() {
 
       push(n1 / n2);
 
+    } else if (ops.data[i].kind == OP_MOD){
+      
+      int n1 = pop();
+      int n2 = pop();
+
+      push(n1 % n2);
     }
     //
     //    Comparison
@@ -361,11 +427,50 @@ int main() {
       pop();
     }
     //
-    //    Keywords
+    //    Memory
+    // 
+    else if (ops.data[i].kind == OP_STORE){
+      
+      int addr = pop();
+      int value = pop();
+
+      heap[addr] = value;
+
+    }else if (ops.data[i].kind == OP_LOAD){
+      
+      int addr = pop();
+      push(heap[addr]);
+
+    }else if (ops.data[i].kind == OP_STORE8){
+      
+      int64_t addr = pop();
+      int64_t value = pop();
+      memcpy(&heap[addr], &value, sizeof(int64_t));
+
+
+    }else if (ops.data[i].kind == OP_LOAD8){
+      
+      int64_t addr = pop();
+      int64_t value;
+      memcpy(&value, &heap[addr], sizeof(int64_t));
+      push(value);
+
+    }else if (ops.data[i].kind == OP_PTR){
+
+      int addr = pop();
+      push((int64_t)&heap[addr]);
+
+    }
+    //
+    //    Control flow
     //
     else if (ops.data[i].kind == OP_IF) {
 
       if (!pop()) i = ops.data[i].as.jump;
+
+    } else if (ops.data[i].kind == OP_ELSE){
+
+      i = ops.data[i].as.jump;
 
     } else if (ops.data[i].kind == OP_DO) {
 
@@ -379,23 +484,41 @@ int main() {
         continue;
        }
 
-       // if End belongs to a If just continue
+       // if End belongs to a If/Else just continue so we skip over end.jump
 
-    } else if (ops.data[i].kind == OP_PRINT) {
+    }
+    //
+    // I/O
+    //
+    else if (ops.data[i].kind == OP_DUMP) {
 
-      printf("%d\n", peek());
+      printf("%ld\n", peek());
 
     } else if (ops.data[i].kind == OP_EXIT){
       
       printf("EXIT\n");
       break;
 
+    } else if (ops.data[i].kind == OP_SYSCALL){
+
+      int64_t argc = pop();
+      int64_t args[6];
+
+      for (int i = argc - 1; i >= 0; --i){
+        args[i] = pop();
+      }
+
+      int num = pop();
+
+      push(doSyscall(num, args, argc));      
+      
     }
 
 #if DEBUG
+    printf("OP: %d\n", ops.data[i].kind);
     printf("stack: [");
     for (int i = 0; i < 10; ++i) {
-      printf("%d, ", stack[i]);
+      printf("%ld, ", stack[i]);
     }
     printf("] stackCounter: %d\n", stackCounter);
     #endif

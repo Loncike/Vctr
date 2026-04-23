@@ -4,7 +4,7 @@ main: build run
 
 build:
 	mkdir -p bin
-	gcc main.c -o ./bin/main
+	gcc main.c -g -o ./bin/main
 
 run:
-	./bin/main
+	./bin/main $(ARGS)

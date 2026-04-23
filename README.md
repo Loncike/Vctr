@@ -11,21 +11,22 @@ A simple stack based programming language made in C.
 
 | Op | Effect | Description | Status | 
 | - | - | - | - | 
-| + | a b -- a | Adds the two elemnts on top of the stack | [Done] |
-| - | a b -- a | Substracts the two elemnts on top of the stack | [Done] |
-| * | a b -- a | Multiplies the two elemnts on top of the stack | [Done] |
-| / | a b -- a | Divides the two elemnts on top of the stack | [Done] |
+| + | a b -- a(b + a) | Adds the two elemnts on top of the stack | [Done] |
+| - | a b -- a(b - a) | Substracts the two elemnts on top of the stack | [Done] |
+| * | a b -- a(b * a) | Multiplies the two elemnts on top of the stack | [Done] |
+| / | a b -- a(b / a) | Divides the two elemnts on top of the stack | [Done] |
+| % | a b -- a(b % a) | Performs modulo operation on the two elements on top of the stack | [DONE]
 
 ### Comparison
 
 | Op | Effect | Description | Status | 
 | - | - | - | - | 
-| == | a b -- a | Checks if two elements on top of the stack equal | [DONE] |
-| != | a b -- a | Checks if two elements on top of the stack not equal | [DONE] |
-| >  | a b -- a | Checks if the first element on top of the stack greater than second element on top of the stack | [DONE] |
-| >= | a b -- a | Checks if the first element on top of the stack greater or equal than second element on top of the stack | [DONE] |
-| <  | a b -- a | Checks if the first element on top of the stack less than second element on top of the stack | [DONE] |
-| <= | a b -- a | Checks if the first element on top of the stack less or equal than second element on top of the stack | [DONE] |
+| == | a b -- a(b == a) | Checks if two elements on top of the stack equal | [DONE] |
+| != | a b -- a(b != a) | Checks if two elements on top of the stack not equal | [DONE] |
+| >  | a b -- a(b > a)  | Checks if the first element on top of the stack greater than second element on top of the stack | [DONE] |
+| >= | a b -- a(b >= a) | Checks if the first element on top of the stack greater or equal than second element on top of the stack | [DONE] |
+| <  | a b -- a(b < a)  | Checks if the first element on top of the stack less than second element on top of the stack | [DONE] |
+| <= | a b -- a(b <= a) | Checks if the first element on top of the stack less or equal than second element on top of the stack | [DONE] |
 
 ### Stack manipulation
 | Op | Effect | Description | Status | 
@@ -38,18 +39,32 @@ A simple stack based programming language made in C.
 
 ### I/O 
  
-| Op | Effect | Description |
-| - | - | - |
-| Print | a -- | Prints the top element of the stack | [DONE]
-| Exit  | a -- | Exits the program with the give exit value| [wip]
+| Op | Effect | Description | Status |
+| - | - | - |- |
+| dump | a -- | Prints the top element of the stack | [DONE]
+| exit  | a -- | Exits the program with the give exit value| [DONE]
 
-### Control
-TODO: Impalemnt else
-#### If
+### Memory
+| Op | Effect | Description | Status |
+| - | - | - |- |
+| store | a: i8 -- | Stores the element on top of the stack at the given point on the heap in 1 byte| [DONE]
+| load  | -- a: i8 | Loads value at the given point on the heap to the top of the stack in 1 byte| [DONE]
+| store8 | a: i64 --| Stores the top element of the stack at the given point on the heap in 8 bytes | [DONE] 
+| load8  | -- a: i64 | Loads value at the given point on the heap to the top of the stack in 8 byte| [DONE]
+| ptr | -- a: *void | Converts heap pointer int oc pointer | [DONE]
+
+### System
+#### syscall
+````
+<NR> <arg0..5>* <argN> syscall 
+````
+
+### Control flow
+#### if
 ````
 <condition> if <body> else* <body> end 
 ````
-#### While
+#### while
 ````
 while <condition> do <body> end 
 ````

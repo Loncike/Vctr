@@ -8,7 +8,7 @@ while dup 10 > do
 	swap
 	rot
 	+
-	print
+	dump
 	rot
 	1 + 
 
