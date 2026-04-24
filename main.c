@@ -198,16 +198,32 @@ void lexer(char *source, Op_DA *ops){
     if (*src == '+') append_OpDA(ops, (Op){OP_ADD});
     if (*src == '-') append_OpDA(ops, (Op){OP_SUB});
     if (*src == '*') append_OpDA(ops, (Op){OP_MUL});
-    if (*src == '/') append_OpDA(ops, (Op){OP_DIV});
+    if (*src == '/') {
+      src++;
+      if (*src == '/'){
+        while (*src != '\n') src++;
+      }else{
+        append_OpDA(ops, (Op){OP_DIV});
+      }
+      continue;
+
+    }
     if (*src == '%') append_OpDA(ops, (Op){OP_MOD});
     if (*src == '=') {
       src++;
       if (*src == '=') {
         append_OpDA(ops, (Op){OP_EE});
-      }else if (*src == '!'){
-        append_OpDA(ops, (Op){OP_NE});
       }else{
         append_OpDA(ops, (Op){OP_EQ});
+      }
+      continue;
+    }
+    if (*src == '!'){
+      src++;
+      if (*src == '='){
+        append_OpDA(ops, (Op){OP_NE});
+      }else{  
+        // i could introduce Not operation
       }
       continue;
     }

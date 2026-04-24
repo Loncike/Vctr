@@ -2,6 +2,21 @@
 
 A simple stack based programming language made in C. 
 
+## TODO
+| Status | Priority | Task | Description |
+| - | - | - | - |
+| Planned | 90 | Error handling | Add error handling for lexer, and runtime eval |  
+| Planned | 70 | String literals | Add support for declaring c-style strings like: ````"Hello, world" 0 store```` |  
+| Planned | 40 | Macros | | 
+| Planned | 20 | Structs |  | 
+| Planned | 10 | Functions | Maybe inspired by wasm | 
+| Planned | 10 | Type checking | like how wasm does it |
+
+### Completed
+| Status | Priority | Task | Description |
+| - | - | - | - |
+| Done | 50 | Comments | Add support for comments | 
+
 ## Stack notation
 (before -- after)
 
@@ -51,7 +66,7 @@ A simple stack based programming language made in C.
 | load  | -- a: i8 | Loads value at the given point on the heap to the top of the stack in 1 byte| [DONE]
 | store8 | a: i64 --| Stores the top element of the stack at the given point on the heap in 8 bytes | [DONE] 
 | load8  | -- a: i64 | Loads value at the given point on the heap to the top of the stack in 8 byte| [DONE]
-| ptr | -- a: *void | Converts heap pointer int oc pointer | [DONE]
+| ptr | -- a: *void | Converts heap pointer into c pointer | [DONE]
 
 ### System
 #### syscall

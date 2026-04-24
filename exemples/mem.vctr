@@ -1,4 +1,3 @@
-
 0
 while dup 3 > do
 	dup 97 +
