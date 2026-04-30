@@ -1,0 +1,11 @@
+// Storing a string starting from address 1
+// and storing its lenght at address 0
+// because stringlit pushes its lenght on the stack
+1 "Hello, world!\n" 0 store 
+
+1      // syscall number: write
+1      // fd: stdout
+1 ptr  // *buf: &heap[1]
+0 load // size: heap[0]
+3      // number of arguments
+syscall

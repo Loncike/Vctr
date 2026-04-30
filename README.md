@@ -5,16 +5,17 @@ A simple stack based programming language made in C.
 ## TODO
 | Status | Priority | Task | Description |
 | - | - | - | - |
-| Planned | 90 | Error handling | Add error handling for lexer, and runtime eval |  
-| Planned | 70 | String literals | Add support for declaring c-style strings like: ````"Hello, world" 0 store```` |  
-| Planned | 40 | Macros | | 
-| Planned | 20 | Structs |  | 
-| Planned | 10 | Functions | Maybe inspired by wasm | 
-| Planned | 10 | Type checking | like how wasm does it |
+| WIP     | 90 | Error handling | Add error handling for lexer, and runtime eval |  
+| Planned | 40 | Structs | A pointer could be casted to a struct, and with that the filds could be set more easily | 
+| Planned | 30 | Macro | With arguments | 
+| Planned | 20 | Varibles | Named heap pointers |
+| Planned | 10 | Procedure | | 
+| Planned | 10 | Type checking | Similar to wasm |
 
 ### Completed
 | Status | Priority | Task | Description |
 | - | - | - | - |
+| Done | 70 | Char literals | ascii chars |
 | Done | 50 | Comments | Add support for comments | 
 
 ## Stack notation
@@ -82,4 +83,18 @@ A simple stack based programming language made in C.
 #### while
 ````
 while <condition> do <body> end 
+````
+
+### String
+````
+<heap addr> "Hello, world\n"
+````
+
+### Macro
+````
+macro write(fd buf n) in
+  1 fd buf ptr n 3 syscall
+end
+
+write(1 1 0)
 ````

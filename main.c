@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <sys/syscall.h>
+#include <err.h>
 
 #define DEBUG 0
  
@@ -17,6 +18,7 @@ typedef enum {
   OP_NIL,
   OP_NUM,
   OP_IDENTIFIER,
+  OP_STRINGLIT,
 
   OP_ADD,
   OP_SUB,
@@ -57,10 +59,16 @@ typedef enum {
 } Op_kind;
 
 typedef struct{
+  const char *start;
+  size_t len;
+}String_view;
+
+typedef struct{
   Op_kind kind;
   union{
     int val;  
     int jump;
+    String_view sv;
   }as;
 }Op;
 
@@ -160,8 +168,10 @@ Op_kind check_Keyword(const char *start, size_t len){
 
 void lexer(char *source, Op_DA *ops){
   const char *src = source;
+  int line = 0;
 
   while(*src){
+    if (*src == '\n') line++;
     if (isspace(*src)) src++;
     
     // TODO: add support for minus nums
@@ -182,17 +192,26 @@ void lexer(char *source, Op_DA *ops){
       Op_kind kind = check_Keyword(start, len);
       Op op = {kind};
 
-      /*
       if (op.kind == OP_NIL){
-        op.kind = OP_IDENTIFIER;
-        memcpy(op.as.identifier, start, len);
-
+        errx(1, "Unexpected keyword: '%.*s' at line: %d", len, start, line)        ;
       }
-      */
       
       append_OpDA(ops, op);
       continue;
       
+    }
+
+    if (*src == '"'){
+      src++;
+      const char *start = src;
+      while (*src != '"'){
+        src++;
+      }
+      int len = src - start;
+
+      String_view sv = {start, len};
+      Op op = {OP_STRINGLIT, .as.sv=sv};
+      append_OpDA(ops, op);
     }
 
     if (*src == '+') append_OpDA(ops, (Op){OP_ADD});
@@ -300,6 +319,45 @@ int doSyscall(int num, int64_t *args, int64_t argc) {
     }
 }
 
+size_t put_string_on_heap(uint8_t *heap, int addr, String_view sv){
+  size_t offset = 0;  
+  for (size_t i = 0; i < sv.len; ++i){
+    char c = sv.start[i];
+    if (c == '\\' && i + 1 < sv.len) {
+      i++;
+
+      switch (sv.start[i]) {
+      case 'n':
+        heap[addr + offset++] = '\n';
+        break;
+      case 't':
+        heap[addr + offset++] = '\t';
+        break;
+      case 'r':
+        heap[addr + offset++] = '\r';
+        break;
+      case '\\':
+        heap[addr + offset++] = '\\';
+        break;
+      case '"':
+        heap[addr + offset++] = '"';
+        break;
+      default:
+        heap[addr + offset++] = sv.start[i];
+        break;
+      }
+
+    } else {
+      heap[addr + offset++] = c;
+    }
+  }
+  heap[addr + offset] = '\0';
+  return offset;
+
+}
+
+#define HEAP_SIZE 1024
+
 int main(int argc, char *argv[]) {
 
   if (argc != 2){
@@ -313,7 +371,7 @@ int main(int argc, char *argv[]) {
   lexer(buf, &ops);  
 
 
-  uint8_t *heap = malloc(sizeof(uint8_t) * 1024);
+  uint8_t *heap = malloc(sizeof(uint8_t) * HEAP_SIZE);
 
   int64_t stack[256];
   int stackCounter = 0;
@@ -324,6 +382,12 @@ int main(int argc, char *argv[]) {
     if (ops.data[i].kind == OP_NUM) {
 
       push(ops.data[i].as.val);
+
+    }else if (ops.data[i].kind == OP_STRINGLIT){
+
+      int addr = pop();
+      size_t len = put_string_on_heap(heap, addr, ops.data[i].as.sv);
+      push(len);
 
     }
     //
@@ -448,6 +512,7 @@ int main(int argc, char *argv[]) {
     else if (ops.data[i].kind == OP_STORE){
       
       int addr = pop();
+      if (addr < 0 || addr >= HEAP_SIZE) errx(1, "Heap address out of bounds: %d", addr);
       int value = pop();
 
       heap[addr] = value;
@@ -455,11 +520,13 @@ int main(int argc, char *argv[]) {
     }else if (ops.data[i].kind == OP_LOAD){
       
       int addr = pop();
+      if (addr < 0 || addr >= HEAP_SIZE) errx(1, "Heap address out of bounds: %d", addr);
       push(heap[addr]);
 
     }else if (ops.data[i].kind == OP_STORE8){
       
       int64_t addr = pop();
+      if (addr < 0 || addr >= HEAP_SIZE) errx(1, "Heap address out of bounds: %ld", addr);
       int64_t value = pop();
       memcpy(&heap[addr], &value, sizeof(int64_t));
 
@@ -467,6 +534,7 @@ int main(int argc, char *argv[]) {
     }else if (ops.data[i].kind == OP_LOAD8){
       
       int64_t addr = pop();
+      if (addr < 0 || addr >= HEAP_SIZE) errx(1, "Heap address out of bounds: %ld", addr);
       int64_t value;
       memcpy(&value, &heap[addr], sizeof(int64_t));
       push(value);
